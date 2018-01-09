@@ -1,11 +1,10 @@
-class Button
-{
+class Button {
     private:
         // The pin this button is connected to
-        int _pin;
+        uint8_t _pin;
   
         // The time in milliseconds for the state to be held before considering it to be on
-        unsigned long _debounce_time;
+        uint8_t _debounce_time;
 
         // Whether the button is pressed or not
         bool _is_pressed;
@@ -21,75 +20,63 @@ class Button
   
     public:
         // Constructor
-        Button(int pin, int debounce_time, void (*callback)());
+        Button(uint8_t pin, uint8_t debounce_time, void (*callback)()) {
+            _pin = pin;
+            _debounce_time = debounce_time;
+            _is_pressed = false;
+            _last_read = LOW;
+            _last_activation = 0;
+            _on_complete = callback;
+        }
     
         // Class setup
-        void init();
+        void init() {
+            pinMode(_pin, INPUT);
+        }
     
         // Determine if the button is pressed or not
-        bool is_pressed();
+        bool is_pressed() {
+            return _is_pressed;
+        }
     
         // Update the button each time round the main loop
-        void update();
-};
+        void update() {
+            // Read state of the button
+            int current_read = digitalRead(_pin);
 
-Button::Button(int pin, int debounce_time, void (*callback)())
-{
-    _pin = pin;
-    _debounce_time = debounce_time;
-    _is_pressed = false;
-    _last_read = LOW;
-    _last_activation = 0;
-    _on_complete = callback;
-}
+            // If the button is on
+            if (current_read == HIGH) {
 
-void Button::init()
-{
-    pinMode(_pin, INPUT);
-}
-
-bool Button::is_pressed()
-{
-    return _is_pressed;
-}
-
-void Button::update()
-{
-    // Read state of the button
-    int current_read = digitalRead(_pin);
-
-    // If the button is on
-    if (current_read == HIGH) {
-
-        // If the button isn't already activated
-        if (_is_pressed == false) {
-      
-            // Get current time
-            unsigned long current_time = millis();
-  
-            // If it was on before
-            if (_last_read == HIGH) {
-      
-                // If it's been on for longer that the debounce time set state to on, otherwise just keep waiting
-                if (current_time - _last_activation > _debounce_time) {
-                    // The button is on - set the state to on and call the callback
-                    _is_pressed = true;
-                    if (_on_complete != NULL) {
-                        _on_complete();
+                // If the button isn't already activated
+                if (_is_pressed == false) {
+              
+                    // Get current time
+                    unsigned long current_time = millis();
+          
+                    // If it was on before
+                    if (_last_read == HIGH) {
+              
+                        // If it's been on for longer that the debounce time set state to on, otherwise just keep waiting
+                        if (current_time - _last_activation > _debounce_time) {
+                            // The button is on - set the state to on and call the callback
+                            _is_pressed = true;
+                            if (_on_complete != NULL) {
+                                _on_complete();
+                            }
+                        }
+                    // Else it's just turned on, track when it turned on, and that it's on    
+                    } else {
+                        _last_activation = current_time;
+                        _last_read = HIGH;
                     }
                 }
-            // Else it's just turned on, track when it turned on, and that it's on    
+            // Else the button is off. reset counters and set state to off
             } else {
-                _last_activation = current_time;
-                _last_read = HIGH;
+                _is_pressed = false;
+                _last_read = LOW;
             }
         }
-    // Else the button is off. reset counters and set state to off
-    } else {
-        _is_pressed = false;
-        _last_read = LOW;
-    }
-}
+};
 
 void blah(){
     Serial.println("Button Pressed");

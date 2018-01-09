@@ -17,10 +17,13 @@
 #define NUM_LEDS 16
 #define DATA_PIN 2
 
-enum class led_mode_t {CONSTANT, PULSE_VALUE_LINEAR, PULSE_VALUE_SIN};
-enum class led_grp_mode_t {HELLO, WORLD};
+// enum class led_mode_t {CONSTANT, PULSE_VALUE_LINEAR, PULSE_VALUE_SIN};
+// enum class led_grp_mode_t {CONSTANT};
 
 class LED {
+    public:
+        enum mode_t {CONSTANT, PULSE_VALUE_LINEAR, PULSE_VALUE_SIN};
+
     private:
         float _hue;
         float _saturation;
@@ -36,7 +39,7 @@ class LED {
 
         unsigned char _index;
         CRGB * _leds;
-        led_mode_t _mode;
+        mode_t _mode;
 
     public:
         LED() {
@@ -72,6 +75,34 @@ class LED {
         void link_to_globals(CRGB * leds, int index) {
             _leds = leds;
             _index = index;
+        }
+
+        void set_mode(mode_t mode) {
+            switch(_mode){
+                case CONSTANT:
+                    set_mode_constant();
+                    break;
+                case PULSE_VALUE_LINEAR:
+                    set_mode_pulse_value_linear();
+                    break;
+                case PULSE_VALUE_SIN:
+                    set_mode_pulse_value_sin();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        void set_mode_constant() {
+            _mode = CONSTANT;
+        }
+
+        void set_mode_pulse_value_linear() {
+            _mode = PULSE_VALUE_LINEAR;
+        }
+
+        void set_mode_pulse_value_sin() {
+            _mode = PULSE_VALUE_SIN;
         }
 
         void set_hue(float hue) {
@@ -164,23 +195,68 @@ class LED {
 };
 
 class LEDGroup {
+    public:
+        enum mode_t {CONSTANT};
+
     private:
         mode_t _mode;
         uint8_t _num_leds;
         LED * _leds;
+        uint8_t * _led_indecies;
+
+        uint8_t _hue;
+        uint8_t _saturation;
+        uint8_t _value;
+
     public:
         // Default constructor
         LEDGroup() {
             _mode = CONSTANT;
             _leds = NULL;
+            _hue = 128;
+            _saturation = 255;
+            _value = 255;
         }
 
         void set_mode(mode_t mode) {
+            switch(mode){
+                case CONSTANT:
+                    set_constant_mode();
+                    break;
+                default:
+                    break;
+            }
+        }
 
+        void set_constant_mode() {
+            _mode = CONSTANT;
+            for (int index = 0; index < _num_leds; index++) {
+                _leds[_led_indecies[index]].set_mode(LED::CONSTANT);
+                _leds[_led_indecies[index]].set_hue(_hue);
+                _leds[_led_indecies[index]].set_value(_value);
+            }
         }
 
         void update() {
+            switch(_mode){
+                case CONSTANT:
+                    update_constant();
+                    break;
+                default:
+                    break;
+            }
+        }
 
+        void update_constant(){
+            // Nothing to do!
+        }
+
+        void set_hue(uint8_t hue) {
+            _hue = hue;
+        }
+
+        void set_value(uint8_t value) {
+            _value = value;
         }
 };
 
@@ -192,6 +268,10 @@ LED leds[NUM_LEDS];
 
 void setup() {
     // put your setup code here, to run once:
+    LED::mode_t foo = LED::CONSTANT;
+    LEDGroup::mode_t bar = LEDGroup::CONSTANT;
+
+
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(global_leds, NUM_LEDS);
     //FastLED.setBrightness(128);
 
