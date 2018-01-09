@@ -17,9 +17,8 @@
 #define NUM_LEDS 16
 #define DATA_PIN 2
 
-enum mode_t {CONSTANT, PULSE_VALUE_LINEAR, PULSE_VALUE_SIN};
-
-enum class test_t {HELLO, WORLD};
+enum class led_mode_t {CONSTANT, PULSE_VALUE_LINEAR, PULSE_VALUE_SIN};
+enum class led_grp_mode_t {HELLO, WORLD};
 
 class LED {
     private:
@@ -37,7 +36,7 @@ class LED {
 
         unsigned char _index;
         CRGB * _leds;
-        mode_t _mode;
+        led_mode_t _mode;
 
     public:
         LED() {
