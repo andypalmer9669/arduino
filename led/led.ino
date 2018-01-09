@@ -14,10 +14,12 @@
 // }
 
 
-#define NUM_LEDS 4
+#define NUM_LEDS 16
 #define DATA_PIN 2
 
-enum mode_t {CONSTANT, PULSE_VALUE_LINEAR, PULSE_VALUE_SIN, };
+enum mode_t {CONSTANT, PULSE_VALUE_LINEAR, PULSE_VALUE_SIN};
+
+enum class test_t {HELLO, WORLD};
 
 class LED {
     private:
@@ -79,14 +81,6 @@ class LED {
 
         // Set the value of the pixel
         void set_value(float value) {
-            // if (value > _max_value) {
-            //     _value = _max_value;
-            // } else if (value < _min_value) {
-            //     _value = _min_value;
-            // } else {
-            //     _value = value;
-            // }
-
             if (value > _max_value) {
                 _value = dim8_raw(_max_value);
             } else if (value < _min_value) {
@@ -170,40 +164,69 @@ class LED {
         }
 };
 
+class LEDGroup {
+    private:
+        mode_t _mode;
+        uint8_t _num_leds;
+        LED * _leds;
+    public:
+        // Default constructor
+        LEDGroup() {
+            _mode = CONSTANT;
+            _leds = NULL;
+        }
+
+        void set_mode(mode_t mode) {
+
+        }
+
+        void update() {
+
+        }
+};
+
 CRGB global_leds[NUM_LEDS];
 LED leds[NUM_LEDS];
 
-// LED red, green, blue;
+//LED red, green, blue;
 
 
 void setup() {
     // put your setup code here, to run once:
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(global_leds, NUM_LEDS);
-     FastLED.setBrightness(128);
+    //FastLED.setBrightness(128);
 
     // indiv RGB
     // red.link_to_globals(global_leds, 0);
     // red.set_hue(0);
-    // red.set_pulse_value_period(3000);
-    // red.set_pulse_value_offset(0);
+    // red.set_pulse_value_sin_bpm(20);
+    // red.set_pulse_value_sin_offset(0);
 
     // green.link_to_globals(global_leds, 5);
     // green.set_hue(96);
-    // green.set_pulse_value_period(3000);
-    // green.set_pulse_value_offset(1000);
+    // green.set_pulse_value_sin_bpm(20);
+    // green.set_pulse_value_sin_offset(1000);
 
     // blue.link_to_globals(global_leds, 10);
     // blue.set_hue(160);
-    // blue.set_pulse_value_period(3000);
-    // blue.set_pulse_value_offset(2000);
-
+    // blue.set_pulse_value_sin_bpm(20);
+    // blue.set_pulse_value_sin_offset(2000);
 
 
     // Sin fade
+    // for (int index = 0; index < NUM_LEDS; index++) {
+    //     leds[index].link_to_globals(global_leds, index);
+    //     leds[index].set_pulse_value_sin_bpm(15);
+    //     leds[index].set_pulse_value_sin_offset(1000*index);
+    // }
+
+
+    // Random rainbow sin
     for (int index = 0; index < NUM_LEDS; index++) {
+        leds[index].set_hue(random8());
         leds[index].link_to_globals(global_leds, index);
-        leds[index].set_pulse_value_sin_bpm(15);
-        leds[index].set_pulse_value_sin_offset(1000*index);
+        leds[index].set_pulse_value_sin_bpm(random8(10,60));
+        leds[index].set_pulse_value_sin_offset(random16(6000));
     }
 
 
@@ -223,7 +246,6 @@ void setup() {
     //     leds[index].set_pulse_value_period(random16(1000, 6000));
     //     leds[index].set_pulse_value_offset(random16(1000));
     //}
-
 
 
     // Print dimming behaviour
