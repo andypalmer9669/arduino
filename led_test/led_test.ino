@@ -4,12 +4,13 @@
 
 CRGB leds[NUM_LEDS];
 int hue = 0;
-int value = 0;
+int value = 255;
 int divider_count = 0;
 int divider = 5;
 
 void setup() { 
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
+    FastLED.setBrightness(200);
 }
 
 void loop() {
@@ -21,10 +22,10 @@ void loop() {
     }
     // leds[0] = CHSV(hue, 255, 128);
     hue = (hue + 1) % 256;
-    divider_count = (divider_count + 1) % (divider + 1);
-    if (divider_count == 0) {
-        value = (value + 1) % 256;
-    }
+    // divider_count = (divider_count + 1) % (divider + 1);
+    // if (divider_count == 0) {
+    //     value = (value + 1) % 256;
+    // }
     FastLED.show();
     delay(10);
 }

@@ -3,7 +3,7 @@ class Potentiometer {
     // middle pin to the analog input pin chosen.
 
     private:
-        // The pin this potentiometer is reading from to
+        // The pin this potentiometer is reading from
         uint8_t _pin;
   
         // The value of the potentiometer
@@ -51,7 +51,6 @@ class Potentiometer {
                 // Get the current value
                 uint16_t test_val = analogRead(_pin);
 
-
                 // Getting really weird flickering of values for vals > ~970
                 signed char diff = test_val - _value;
                 if (abs(diff) > 2) {
@@ -59,10 +58,12 @@ class Potentiometer {
                     _value = test_val;
 
                     // Call the callback
-                    _callback(_value);
+                    if (_on_complete != NULL) {
+                        _on_complete(_value);
+                    }
                 }
 
-                // If the value has changed by more than one
+                // If the value has changed
                 // if (test_val != _value) {
                 //     // Store it
                 //     _value = test_val;
