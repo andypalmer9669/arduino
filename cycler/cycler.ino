@@ -1,3 +1,5 @@
+#include <FastLED.h>
+
 // Could define speed as number of millis per hue
 // and keep a count rather than a floating point
 
@@ -37,16 +39,30 @@ private:
     float _speed_mult;
 
 public:
+    Cycler() {
+        _value_timebase_speed = 1;
+        _value_timebase = 0;
+        _hue_speed = 0.1;
+        _hue = 0;
+        _hue_offset = 0;
+        _mode = PULSE_VALUE;
+        _speed_mult = 1.0;
+    }
+
+    void init() {
+        _last_update = millis();
+    }
+
     float wrap_255_float(float input) {
-        float result = 0.0
+        float result = 0.0;
 
         // Do a floating point modulo 0-255.999999...
-        int int_part = int(input)
-        float decmal_part = input - int_part;
+        int int_part = int(input);
+        float decimal_part = input - int_part;
         int wrapped = int_part % 256;
         float wrapped_float = wrapped + decimal_part;
 
-        return wrapped_float
+        return wrapped_float;
     }
 
     void set_mode(mode_t mode) {
@@ -70,7 +86,7 @@ public:
     }
 
     void set_hue_offset(uint8_t hue_offset) {
-        _hue_offset = hue_offset
+        _hue_offset = hue_offset;
     }
 
     void update() {
@@ -107,7 +123,7 @@ public:
     }
 
     void update_pulse_value(uint8_t elapsed_millis) {
-        float new_value_timebase = _value_timebase + (elapsed_millis * _value_timebase_speed * _speed_mult)
+        float new_value_timebase = _value_timebase + (elapsed_millis * _value_timebase_speed * _speed_mult);
         _value_timebase = wrap_255_float(new_value_timebase);
     }
 
@@ -116,17 +132,53 @@ public:
         update_pulse_value(elapsed_millis);
         // When it goes from above the threshold to below it
         if ((_previous_value >= HUE_CHANGE_THRESHOLD) && (get_value() < HUE_CHANGE_THRESHOLD)) {
-            _hue = float(uintrandom8());
+            _hue = float(random8());
         }
     }
     void update_pulse_value_cycle_hue(uint8_t elapsed_millis) {
         update_pulse_value(elapsed_millis);
-        update_cycle_hue(elapsed_millis)
+        update_cycle_hue(elapsed_millis);
     }
 };
 
+Cycler c0;
+Cycler c1;
+Cycler c2;
+Cycler c3;
+Cycler c4;
+// Cycler c5;
+// Cycler c6;
+// Cycler c7;
+// Cycler c8;
+// Cycler c9;
 
+// float nums[10] = {0,1,2,3,4,5,6,7,8,9};
 
+void setup() {
+    // put your setup code here, to run once:
+    c0.init();
+    c1.init();
+    c2.init();
+    c3.init();
+    c4.init();
+    Serial.begin(9600);
+}
+
+void loop() {
+    // put your main code here, to run repeatedly:
+    c0.update();
+    c1.update();
+    c2.update();
+    c3.update();
+    c4.update();
+    // c5.update();
+    // c6.update();
+    // c7.update();
+    // c8.update();
+    // c9.update();
+    // c8.update();
+    Serial.println(c0.get_value());
+}
 
 
 

@@ -16,7 +16,7 @@ class Button {
         unsigned long _last_activation;
 
         // Callback for when the button is pressed
-        void (*_on_complete)();
+        void (*_callback)();
   
     public:
         // Constructor
@@ -26,7 +26,7 @@ class Button {
             _is_pressed = false;
             _last_read = LOW;
             _last_activation = 0;
-            _on_complete = callback;
+            _callback = callback;
         }
     
         // Class setup
@@ -60,8 +60,8 @@ class Button {
                         if (current_time - _last_activation > _debounce_time) {
                             // The button is on - set the state to on and call the callback
                             _is_pressed = true;
-                            if (_on_complete != NULL) {
-                                _on_complete();
+                            if (_callback != NULL) {
+                                _callback();
                             }
                         }
                     // Else it's just turned on, track when it turned on, and that it's on    

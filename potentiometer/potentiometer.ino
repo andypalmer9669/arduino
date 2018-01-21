@@ -5,39 +5,51 @@ class Potentiometer {
     private:
         // The pin this potentiometer is reading from
         uint8_t _pin;
-  
-        // The value of the potentiometer
-        uint16_t _value;
-    
+
+        // The remapped value of the potentiometer
+        uint8_t _value;
+
         // How many millisecods to wait between updates
         uint8_t _update_period;
 
         // When the last update was
         unsigned long _last_update;
-    
+
         // Callback for when the value changes
         void (*_callback)(uint16_t);
-  
+
     public:
         // Constructor
-        Potentiometer(uint8_t pin, uint8_t update_period, void (*callback)(uint16_t)) {
+        Potentiometer(uint8_t pin, uint8_t update_period, void (*callback)(uint8_t)) {
             _pin = pin;
             _update_period = update_period;
             _callback = callback;
             _last_update = 0;
         }
-    
+
         // Class setup
         void init() {
             pinMode(_pin, INPUT);
-            _value = analogRead(_pin);
+            _value = de_log_and_map(analogRead(_pin));
         }
-    
+
         // The most up to date value of the potentiometer
-        uint16_t get_value() {
+        uint8_t get_value() {
             return _value;
         }
-    
+
+        // Need to do this de-logging because I bought logarithmic rather than 
+        // linear potentiometers :(
+        uint8_t de_log_and_map(uint16_t input) {
+            uint8_t result = 0;
+            if (input <= 150) {
+                result = map(input, 0, 150, 0, 128);
+            } else {
+                result = map(input, 151, 1023, 129, 255);
+            }
+            return result;
+        }
+
         // Update the potentiometer each time round the main loop
         void update() {
             // Get current time
@@ -49,33 +61,24 @@ class Potentiometer {
                 _last_update = current_time;
 
                 // Get the current value
-                uint16_t test_val = analogRead(_pin);
+                uint8_t test_val = de_log_and_map(analogRead(_pin));
 
-                // Getting really weird flickering of values for vals > ~970
+                // Need to do this because the output is really noisy :(
                 signed char diff = test_val - _value;
                 if (abs(diff) > 2) {
                     // Store it
                     _value = test_val;
 
                     // Call the callback
-                    if (_on_complete != NULL) {
-                        _on_complete(_value);
+                    if (_callback != NULL) {
+                        _callback(_value);
                     }
                 }
-
-                // If the value has changed
-                // if (test_val != _value) {
-                //     // Store it
-                //     _value = test_val;
-
-                //     // Call the callback
-                //     _callback(_value);
-                // }
             }
         }
 };
 
-void print_change(uint16_t new_val){
+void print_change(uint8_t new_val){
     Serial.println(new_val);
 }
 
