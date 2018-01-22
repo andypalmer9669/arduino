@@ -305,7 +305,8 @@ class Pixel {
 class PixelGroup {
     public:
         enum mode_t {
-            STATIC
+            STATIC,
+            PULSE_VALUE
         };
 
     private:
@@ -339,31 +340,43 @@ class PixelGroup {
             _num_pixels = num_pixels;
             // I can get away with this because the array being passed in will be global.
             _pixel_indecies = pixel_indecies;
-            _mode = STATIC;
+            _mode = UNIFORM_STATIC;
             _cycler.init();
         }
 
-        void set_all_hue(uint8_t hue) {
+        void set_hue(uint8_t hue) {
             for (int index = 0; index < _num_pixels; index++) {
                 _pixels[_pixel_indecies[index]].set_hue(hue);
             }
         }
 
-        void set_all_rainbow_hue() {
+        void set_rainbow_hue() {
             for (int index = 0; index < _num_pixels; index++) {
                 _pixels[_pixel_indecies[index]].set_hue((255/_num_pixels) * index);
             }
         }
 
-        void set_all_sat(uint8_t sat) {
+        void set_sat(uint8_t sat) {
             for (int index = 0; index < _num_pixels; index++) {
                 _pixels[_pixel_indecies[index]].set_sat(sat);
             }
         }
 
-        void set_all_val(uint8_t val) {
+        void set_val(uint8_t val) {
             for (int index = 0; index < _num_pixels; index++) {
                 _pixels[_pixel_indecies[index]].set_val(val);
+            }
+        }
+
+        void set_value_timebase_speed(float speed) {
+            for (int index = 0; index < _num_pixels; index++) {
+                _pixels[_pixel_indecies[index]].set_value_timebase_speed(speed);
+            }
+        }
+
+        void set_value_timebase(float timebase) {
+            for (int index = 0; index < _num_pixels; index++) {
+                _pixels[_pixel_indecies[index]].set_value_timebase(timebase);
             }
         }
 
@@ -373,11 +386,22 @@ class PixelGroup {
                 case STATIC :
                     set_mode_STATIC();
                     break;
+                case UNIFORM_PULSE_VALUE :
+                    set_mode_PULSE_VALUE();
+                    break;
             }
         }
 
         void set_mode_STATIC() {
-            // Nothing to do!
+            for (int index = 0; index < _num_pixels; index++) {
+                _pixels[_pixel_indecies[index]].set_mode(Pixel::STATIC);
+            }
+        }
+
+        void set_mode_PULSE_VALUE() {
+            for (int index = 0; index < _num_pixels; index++) {
+                _pixels[_pixel_indecies[index]].set_mode(Pixel::PULSE_VALUE);
+            }
         }
 
         // Update the group
@@ -387,10 +411,20 @@ class PixelGroup {
                 case STATIC:
                     update_STATIC();
                     break;
+                case PULSE_VALUE:
+                    update_PULSE_VALUE();
+                    break;
             }
         }
 
         void update_STATIC() {
+            // Update all the pixels
+            for (int index = 0; index < _num_pixels; index++) {
+                _pixels[_pixel_indecies[index]].update();
+            }
+        }
+
+        void update_PULSE_VALUE() {
             // Update all the pixels
             for (int index = 0; index < _num_pixels; index++) {
                 _pixels[_pixel_indecies[index]].update();
@@ -415,9 +449,11 @@ void setup() {
 
     // Ring setup
     ring.init(pixels, 12, ring_pixel_indecies);
-    ring.set_all_rainbow_hue();
-    ring.set_all_sat(255);
-    ring.set_all_val(255);
+    // ring.set_hue(255);
+    ring.set_rainbow_hue();
+    ring.set_sat(255);
+    ring.set_val(255);
+    ring.set_mode(PixelGroup::PULSE_VALUE);
 }
 
 void loop() {
