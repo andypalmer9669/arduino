@@ -16,7 +16,7 @@ class Potentiometer {
         unsigned long _last_update;
 
         // Callback for when the value changes
-        void (*_callback)(uint16_t);
+        void (*_callback)(uint8_t);
 
     public:
         // Constructor
