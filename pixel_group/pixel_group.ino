@@ -340,7 +340,7 @@ class PixelGroup {
             _num_pixels = num_pixels;
             // I can get away with this because the array being passed in will be global.
             _pixel_indecies = pixel_indecies;
-            _mode = UNIFORM_STATIC;
+            _mode = STATIC;
             _cycler.init();
         }
 
@@ -386,7 +386,7 @@ class PixelGroup {
                 case STATIC :
                     set_mode_STATIC();
                     break;
-                case UNIFORM_PULSE_VALUE :
+                case PULSE_VALUE :
                     set_mode_PULSE_VALUE();
                     break;
             }

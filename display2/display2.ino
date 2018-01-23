@@ -9,10 +9,29 @@
 #define MIN_VAL 40
 #define HUE_CHANGE_THRESHOLD 20
 
-#define NUM_LEDS 22
+// #define NUM_LEDS 22
+#define NUM_LEDS 12
 #define DATA_PIN 2
 
-enum mode_t {STATIC};
+// Mode setup
+enum mode_t {
+    UNIFORM_HUE_STATIC,
+    UNIFORM_HUE_PULSE_VALUE,
+    RANDOM_HUE_STATIC
+};
+const int num_modes = 3;
+uint8_t modes[num_modes] = {
+    UNIFORM_HUE_STATIC,
+    UNIFORM_HUE_PULSE_VALUE,
+    RANDOM_HUE_STATIC
+    };
+uint8_t mode_index = 0;
+
+// Pot 3 behaviour setup
+enum pot3_mode_t {
+    VALUE,
+    SPEED
+};
 
 class Button {
     private:
@@ -475,7 +494,7 @@ class PixelGroup {
     public:
         enum mode_t {
             STATIC,
-            PULSE_VALUE
+            SYNCHRONISED_PULSE_VALUE
         };
 
     private:
@@ -509,7 +528,7 @@ class PixelGroup {
             _num_pixels = num_pixels;
             // I can get away with this because the array being passed in will be global.
             _pixel_indecies = pixel_indecies;
-            _mode = UNIFORM_STATIC;
+            _mode = STATIC;
             _cycler.init();
         }
 
@@ -519,9 +538,21 @@ class PixelGroup {
             }
         }
 
+        void set_hue_offset(float hue_offset) {
+            for (int index = 0; index < _num_pixels; index++) {
+                _pixels[_pixel_indecies[index]].set_hue_offset(hue_offset);
+            }
+        }
+
         void set_rainbow_hue() {
             for (int index = 0; index < _num_pixels; index++) {
                 _pixels[_pixel_indecies[index]].set_hue((255/_num_pixels) * index);
+            }
+        }
+
+        void randomise_hue() {
+            for (int index = 0; index < _num_pixels; index++) {
+                _pixels[_pixel_indecies[index]].set_hue(random8());
             }
         }
 
@@ -538,15 +569,17 @@ class PixelGroup {
         }
 
         void set_value_timebase_speed(float speed) {
-            for (int index = 0; index < _num_pixels; index++) {
-                _pixels[_pixel_indecies[index]].set_value_timebase_speed(speed);
-            }
+            // for (int index = 0; index < _num_pixels; index++) {
+            //     _pixels[_pixel_indecies[index]].set_value_timebase_speed(speed);
+            // }
+            _cycler.set_value_timebase_speed(speed);
         }
 
         void set_value_timebase(float timebase) {
-            for (int index = 0; index < _num_pixels; index++) {
-                _pixels[_pixel_indecies[index]].set_value_timebase(timebase);
-            }
+            // for (int index = 0; index < _num_pixels; index++) {
+            //     _pixels[_pixel_indecies[index]].set_value_timebase(timebase);
+            // }
+            _cycler.set_value_timebase(timebase);
         }
 
         void set_mode(mode_t mode) {
@@ -555,8 +588,8 @@ class PixelGroup {
                 case STATIC :
                     set_mode_STATIC();
                     break;
-                case UNIFORM_PULSE_VALUE :
-                    set_mode_PULSE_VALUE();
+                case SYNCHRONISED_PULSE_VALUE :
+                    set_mode_SYNCHRONISED_PULSE_VALUE();
                     break;
             }
         }
@@ -567,9 +600,10 @@ class PixelGroup {
             }
         }
 
-        void set_mode_PULSE_VALUE() {
+        void set_mode_SYNCHRONISED_PULSE_VALUE() {
+            _cycler.set_mode(Cycler::PULSE_VALUE);
             for (int index = 0; index < _num_pixels; index++) {
-                _pixels[_pixel_indecies[index]].set_mode(Pixel::PULSE_VALUE);
+                _pixels[_pixel_indecies[index]].set_mode(Pixel::STATIC);
             }
         }
 
@@ -580,8 +614,8 @@ class PixelGroup {
                 case STATIC:
                     update_STATIC();
                     break;
-                case PULSE_VALUE:
-                    update_PULSE_VALUE();
+                case SYNCHRONISED_PULSE_VALUE:
+                    update_SYNCHRONISED_PULSE_VALUE();
                     break;
             }
         }
@@ -593,7 +627,9 @@ class PixelGroup {
             }
         }
 
-        void update_PULSE_VALUE() {
+        void update_SYNCHRONISED_PULSE_VALUE() {
+            // Set value on all the pixels
+            set_val(_cycler.get_value());
             // Update all the pixels
             for (int index = 0; index < _num_pixels; index++) {
                 _pixels[_pixel_indecies[index]].update();
@@ -601,76 +637,181 @@ class PixelGroup {
         }
 };
 
-Potentiometer pot1;
-Potentiometer pot2;
-Potentiometer pot3;
-Button button1;
-Button button2;
+// PixelGroup all_pixels;
+// uint8_t all_pixel_indecies[22] = {0,1,2,3,4, 5,6,7,8,9, 10,11,12,13,14, 15,16,17,18,19 ,20,21};
+
+// PixelGroup ring_pixels;
+// uint8_t ring_pixel_indecies[16] = {6,7,8,9,10, 11,12,13,14,15, 16,17,18,19,20, 21};
+
+// PixelGroup not_ring_pixels;
+// uint8_t not_ring_pixel_indecies[6] = {0,1,2,3,4, 5};
+
 PixelGroup all_pixels;
+uint8_t all_pixel_indecies[12] = {0,1,2,3,4, 5,6,7,8,9, 10,11};
+
 PixelGroup ring_pixels;
+uint8_t ring_pixel_indecies[6] = {6,7,8,9,10, 11};
+
 PixelGroup not_ring_pixels;
-mode_t mode;
+uint8_t not_ring_pixel_indecies[6] = {0,1,2,3,4, 5};
+
+mode_t mode = UNIFORM_HUE_STATIC;
+pot3_mode_t pot3_mode = VALUE;
 
 void pot_1_change(uint8_t new_val) {
-
+    switch (mode) {
+        case UNIFORM_HUE_STATIC:
+        case UNIFORM_HUE_PULSE_VALUE:
+            all_pixels.set_hue(new_val);
+            break;
+        case RANDOM_HUE_STATIC:
+            ring_pixels.set_hue_offset(new_val);
+            not_ring_pixels.set_hue_offset(new_val);
+            break;
+    }
 }
 
 void pot_2_change(uint8_t new_val) {
-
+    switch (mode) {
+        case UNIFORM_HUE_STATIC:
+        case UNIFORM_HUE_PULSE_VALUE:
+            all_pixels.set_sat(new_val);
+            break;
+        case RANDOM_HUE_STATIC:
+            ring_pixels.set_sat(new_val);
+            not_ring_pixels.set_sat(new_val);
+    }
 }
 
 void pot_3_change(uint8_t new_val) {
-
+    switch (mode) {
+        case UNIFORM_HUE_STATIC:
+        case RANDOM_HUE_STATIC:
+            FastLED.setBrightness(new_val);
+            break;
+        case UNIFORM_HUE_PULSE_VALUE:
+            switch (pot3_mode) {
+                case VALUE:
+                    FastLED.setBrightness(new_val);
+                    break;
+                case SPEED:
+                    all_pixels.set_value_timebase_speed(float(new_val)/750.0);
+                    break;
+            break;
+            }
+    }
 }
 
 void button_1_press() {
-
+    // Change the function of pot 3
+    if (pot3_mode == VALUE) {
+        pot3_mode = SPEED;
+    } else {
+        pot3_mode = VALUE;
+    }
 }
 
 void button_2_press() {
-
+    // Change the mode
+    mode_index = (mode_index + 1) % num_modes;
+    set_mode(modes[mode_index]);
 }
+
+Potentiometer pot1(POT1_PIN, 10, &pot_1_change);
+Potentiometer pot2(POT2_PIN, 10, &pot_2_change);
+Potentiometer pot3(POT3_PIN, 10, &pot_3_change);
+Button button1(BUTTON1_PIN, 50, &button_1_press);
+Button button2(BUTTON2_PIN, 50, &button_2_press);
 
 void update() {
-
+    switch (mode) {
+        case UNIFORM_HUE_STATIC:
+            update_UNIFORM_HUE_STATIC();
+            break;
+        case UNIFORM_HUE_PULSE_VALUE:
+            update_UNIFORM_HUE_PULSE_VALUE();
+            break;
+        case RANODM_HUE_STATIC:
+            update_RANDOM_HUE_STATIC();
+            break;
+    }
 }
 
-void update_STATIC() {
-
+void update_UNIFORM_HUE_STATIC() {
+    all_pixels.update();
 }
 
-void set_mode(mode_t mode) {
-
+void update_UNIFORM_HUE_PULSE_VALUE() {
+    all_pixels.update();
 }
 
-void set_mode_STATIC() {
-
+void update_RANDOM_HUE_STATIC() {
+    ring_pixels.update();
+    not_pixels.update();
 }
+
+void set_mode(mode_t _mode) {
+    mode = _mode;
+    switch (_mode) {
+        case UNIFORM_HUE_STATIC:
+            set_mode_UNIFORM_HUE_STATIC();
+            break;
+        case UNIFORM_HUE_PULSE_VALUE:
+            set_mode_UNIFORM_HUE_PULSE_VALUE();
+            break;
+        case RANDOM_HUE_STATIC:
+            set_mode_RANDOM_HUE_STATIC();
+            break;
+    }
+}
+
+void set_mode_UNIFORM_HUE_STATIC() {
+    all_pixels.set_mode(PixelGroup::STATIC);
+    all_pixels.set_hue(pot1.get_value());
+    all_pixels.set_sat(pot2.get_value());
+    all_pixels.set_val(255);
+    FastLED.setBrightness(pot3.get_value());
+}
+
+void set_mode_UNIFORM_HUE_PULSE_VALUE() {
+    all_pixels.set_mode(PixelGroup::SYNCHRONISED_PULSE_VALUE);
+    all_pixels.set_hue(pot1.get_value());
+    all_pixels.set_sat(pot2.get_value());
+    all_pixels.set_value_timebase(0);
+    switch (pot3_mode) {
+        case VALUE:
+            all_pixels.set_value_timebase_speed(0.1);
+            break;
+        case SPEED:
+            all_pixels.set_value_timebase_speed(float(pot3.get_value())/750.0);
+            break;
+    }
+}
+
+void set_mode_RANDOM_HUE_STATIC() {
+    not_ring_pixels.set_mode(PixelGroup::STATIC);
+    not_ring_pixels.randomise_hue();
+    not_ring_pixels.set_hue_offset(pot1.get_value());
+    not_ring_pixels.set_sat(pot2.get_value());
+    not_ring_pixels.set_val(255);
+
+    ring_pixels.set_mode(PixelGroup::STATIC);
+    ring_pixels.set_rainbow_hue();
+    ring_pixels.set_hue_offset(pot1.get_value());
+    ring_pixels.set_sat(pot2.get_value());
+    ring_pixels.set_val(255);
+
+    FastLED.setBrightness(pot3.get_value());
 
 CRGB leds[NUM_LEDS];
 Pixel pixels[NUM_LEDS];
-
-pot1 = Potentiometer(POT1_PIN, 10, &pot_1_change);
-pot2 = Potentiometer(POT2_PIN, 10, &pot_2_change);
-pot3 = Potentiometer(POT3_PIN, 10, &pot_3_change);
-button1 = Button(BUTTON1_PIN, 50, &button_1_press);
-button2 = Button(BUTTON2_PIN, 50, &button_2_press);
-
-PixelGroup all_pixels();
-uint8_t all_pixel_indecies[22] = {0,1,2,3,4, 5,6,7,8,9, 10,11,12,13,14, 15,16,17,18,19 ,20,21};
-
-PixelGroup ring_pixels();
-uint8_t ring_pixel_indecies[16] = {6,7,8,9,10, 11,12,13,14,15, 16,17,18,19,20, 21};
-
-PixelGroup not_ring_pixels();
-uint8_t ring_pixel_indecies[6] = {0,1,2,3,4, 5};
 
 void setup() {
     // put your setup code here, to run once:
 
     // LED setup
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
-    FastLED.setBrightness(128);
+    FastLED.setBrightness(255);
 
     // Pixel setup
     for (int index = 0; index < NUM_LEDS; index++) {
@@ -679,11 +820,15 @@ void setup() {
     }
 
     // Group Setup
-	all_pixels.init(pixels, 22, all_pixel_indecies);
-	ring_pixels.init(pixels, 16, ring_pixel_indecies);
-	not_ring_pixels.init(pixels, 6, not_ring_pixel_indecies);
+    // all_pixels.init(pixels, 22, all_pixel_indecies);
+    // ring_pixels.init(pixels, 16, ring_pixel_indecies);
+    // not_ring_pixels.init(pixels, 6, not_ring_pixel_indecies);
+    all_pixels.init(pixels, 12, all_pixel_indecies);
+    ring_pixels.init(pixels, 6, ring_pixel_indecies);
+    not_ring_pixels.init(pixels, 6, not_ring_pixel_indecies);
 
-	// Input Setup
+
+    // Input Setup
     pot1.init();
     pot2.init();
     pot3.init();
@@ -691,13 +836,18 @@ void setup() {
     button2.init();
 
     // State setup
-    mode = STATIC;
     set_mode(mode);
+
+    // Serial.begin(9600);
 }
 
 void loop() {
     // put your main code here, to run repeatedly:
-	update();
-	FastLED.show();
-
+    update();
+    pot1.update();
+    pot2.update();
+    pot3.update();
+    button1.update();
+    button2.update();
+    FastLED.show();
 }
