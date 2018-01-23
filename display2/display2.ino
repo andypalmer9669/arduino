@@ -6,24 +6,26 @@
 #define BUTTON1_PIN 3
 #define BUTTON2_PIN 4
 
-#define MIN_VAL 40
+#define MIN_VAL 0
 #define HUE_CHANGE_THRESHOLD 20
 
 #define NUM_LEDS 22
-//#define NUM_LEDS 12
+// #define NUM_LEDS 12
 #define DATA_PIN 2
 
 // Mode setup
 enum mode_t {
     UNIFORM_HUE_STATIC,
     UNIFORM_HUE_PULSE_VALUE,
-    RANDOM_HUE_STATIC
+    RANDOM_HUE_STATIC,
+    UNIFORM_HUE_CYCLE_HUE
 };
-const int num_modes = 3;
+const int num_modes = 4;
 uint8_t modes[num_modes] = {
     UNIFORM_HUE_STATIC,
     UNIFORM_HUE_PULSE_VALUE,
-    RANDOM_HUE_STATIC
+    RANDOM_HUE_STATIC,
+    UNIFORM_HUE_CYCLE_HUE
     };
 uint8_t mode_index = 0;
 
@@ -501,7 +503,8 @@ class PixelGroup {
     public:
         enum mode_t {
             STATIC,
-            SYNCHRONISED_PULSE_VALUE
+            SYNCHRONISED_PULSE_VALUE,
+            SYNCHRONISED_CYCLE_HUE
         };
 
     private:
@@ -563,6 +566,10 @@ class PixelGroup {
             }
         }
 
+        void set_hue_speed(float speed) {
+            _cycler.set_hue_speed(speed);
+        }
+
         void set_sat(uint8_t sat) {
             for (int index = 0; index < _num_pixels; index++) {
                 _pixels[_pixel_indecies[index]].set_sat(sat);
@@ -598,6 +605,9 @@ class PixelGroup {
                 case SYNCHRONISED_PULSE_VALUE :
                     set_mode_SYNCHRONISED_PULSE_VALUE();
                     break;
+                case SYNCHRONISED_CYCLE_HUE :
+                    set_mode_SYNCHRONISED_CYCLE_HUE();
+                    break;
             }
         }
 
@@ -615,6 +625,13 @@ class PixelGroup {
             }
         }
 
+        void set_mode_SYNCHRONISED_CYCLE_HUE() {
+            _cycler.set_mode(Cycler::CYCLE_HUE);
+            for (int index = 0; index < _num_pixels; index++) {
+                _pixels[_pixel_indecies[index]].set_mode(Pixel::STATIC);
+            }
+        }
+
         // Update the group
         void update() {
             _cycler.update();
@@ -624,6 +641,9 @@ class PixelGroup {
                     break;
                 case SYNCHRONISED_PULSE_VALUE:
                     update_SYNCHRONISED_PULSE_VALUE();
+                    break;
+                case SYNCHRONISED_CYCLE_HUE:
+                    update_SYNCHRONISED_CYCLE_HUE();
                     break;
             }
         }
@@ -638,6 +658,16 @@ class PixelGroup {
         void update_SYNCHRONISED_PULSE_VALUE() {
             // Set value on all the pixels from the cycler
             set_val(_cycler.get_value());
+
+            // Update all the pixels
+            for (int index = 0; index < _num_pixels; index++) {
+                _pixels[_pixel_indecies[index]].update();
+            }
+        }
+
+        void update_SYNCHRONISED_CYCLE_HUE() {
+            // Set value on all the pixels from the cycler
+            set_hue(_cycler.get_hue());
 
             // Update all the pixels
             for (int index = 0; index < _num_pixels; index++) {
@@ -676,6 +706,7 @@ void pot_1_change(uint8_t new_val) {
         case RANDOM_HUE_STATIC:
             ring_pixels.set_hue_offset(new_val);
             not_ring_pixels.set_hue_offset(new_val);
+        case UNIFORM_HUE_CYCLE_HUE:
             break;
     }
 }
@@ -684,6 +715,7 @@ void pot_2_change(uint8_t new_val) {
     switch (mode) {
         case UNIFORM_HUE_STATIC:
         case UNIFORM_HUE_PULSE_VALUE:
+        case UNIFORM_HUE_CYCLE_HUE:
             all_pixels.set_sat(new_val);
             break;
         case RANDOM_HUE_STATIC:
@@ -705,6 +737,16 @@ void pot_3_change(uint8_t new_val) {
                     break;
                 case SPEED:
                     all_pixels.set_value_timebase_speed(float(new_val)/750.0);
+                    break;
+            break;
+            }
+        case UNIFORM_HUE_CYCLE_HUE:
+            switch (pot3_mode) {
+                case VALUE:
+                    FastLED.setBrightness(new_val);
+                    break;
+                case SPEED:
+                    all_pixels.set_hue_speed(float(new_val)/750.0);
                     break;
             break;
             }
@@ -743,6 +785,9 @@ void update() {
         case RANDOM_HUE_STATIC:
             update_RANDOM_HUE_STATIC();
             break;
+        case UNIFORM_HUE_CYCLE_HUE:
+            update_UNIFORM_HUE_CYCLE_HUE();
+            break;
     }
 }
 
@@ -759,6 +804,10 @@ void update_RANDOM_HUE_STATIC() {
     not_ring_pixels.update();
 }
 
+void update_UNIFORM_HUE_CYCLE_HUE() {
+    all_pixels.update();
+}
+
 void set_mode(mode_t _mode) {
     mode = _mode;
     switch (_mode) {
@@ -770,6 +819,9 @@ void set_mode(mode_t _mode) {
             break;
         case RANDOM_HUE_STATIC:
             set_mode_RANDOM_HUE_STATIC();
+            break;
+        case UNIFORM_HUE_CYCLE_HUE:
+            set_mode_UNIFORM_HUE_CYCLE_HUE();
             break;
     }
 }
@@ -813,6 +865,21 @@ void set_mode_RANDOM_HUE_STATIC() {
     ring_pixels.set_val(255);
 
     FastLED.setBrightness(pot3.get_value());
+}
+
+void set_mode_UNIFORM_HUE_CYCLE_HUE() {
+    all_pixels.set_mode(PixelGroup::SYNCHRONISED_CYCLE_HUE);
+    all_pixels.set_hue(0);
+    all_pixels.set_hue_offset(0);
+    all_pixels.set_sat(pot2.get_value());
+    switch (pot3_mode) {
+        case VALUE:
+            all_pixels.set_hue_speed(0.1);
+            break;
+        case SPEED:
+            all_pixels.set_hue_speed(float(pot3.get_value())/750.0);
+            break;
+    }
 }
 
 CRGB leds[NUM_LEDS];
